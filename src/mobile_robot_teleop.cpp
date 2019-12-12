@@ -43,11 +43,7 @@ JoyConfig getJoyConfig(sensor_msgs::JoyConstPtr)
 return config;
 }
 
- int mult(int a, int b)
- {
-     int  c = a*b;
-     return c;
- }
+ 
 
 
 
