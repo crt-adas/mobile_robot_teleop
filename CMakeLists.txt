@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(mobile_robot_teleop)
-
+#include_directories(${catkin_INCLUDE_DIRS})
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
 
@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   message_generation
-  ackermann_msgs
+  #ackermann_msgs
   
 )
 
@@ -53,10 +53,11 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
  add_message_files(
     FILES
-    #AckermannDrive.msg
-    #AckermannDriveStamped.msg
+    
     VfomaHud.msg
     VfomaSetting.msg
+    #AckermannDriveStamped.msg
+    #AckermannDrive.msg
 #   Message2.msg
  )
 
@@ -113,7 +114,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES mobile_robot_teleop
-   CATKIN_DEPENDS joy roscpp rospy std_msgs message_runtime
+   CATKIN_DEPENDS joy roscpp rospy std_msgs message_runtime 
 #  DEPENDS system_lib
 )
 
@@ -199,6 +200,9 @@ include_directories(
 #   # myfile2
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
+add_executable(mobile_robot_teleop src/mobile_robot_teleop.cpp)
+target_link_libraries(mobile_robot_teleop ${catkin_LIBRARIES})
+add_dependencies(mobile_robot_teleop mobile_robot_teleop_generate_messages_cpp)
 
 #############
 ## Testing ##
@@ -212,3 +216,4 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+

@@ -1,10 +1,10 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/Joy.h>
-#include <ackermann_msgs/AckermannDrive.msg>
-#include <ackermann_msgs/AckermannDriveStamped.msg>
-#include <mobile_robot_teleop/VfomaHud.msg>
-#include <mobile_robot_teleop/VfomaSetting.msg>
+#include <ackermann_msgs/AckermannDrive.h>
+#include <ackermann_msgs/AckermannDriveStamped.h>
+#include <mobile_robot_teleop/VfomaHud.h>
+#include <mobile_robot_teleop/VfomaSetting.h>
 #include <string>
 #include <functional>
 #include <ros/console.h>
@@ -23,12 +23,12 @@ struct JoyConfig
 JoyConfig* joyconfig_;
 bool mappingConfigured;
 
-void getJoyConfig(sensor_msgs::JoyConstPtr)
+JoyConfig getJoyConfig(sensor_msgs::JoyConstPtr)
 {
-
+  JoyConfig config;
   if(joy.buttons.size() > 20)
   {
-    joyconfig_->gearUpLeft = 1 
+    config.gearUpLeft = 1 
 
   }else if(joy.buttons.size() > 5) 
   {
@@ -40,15 +40,21 @@ void getJoyConfig(sensor_msgs::JoyConstPtr)
 
 
 
-mappingConfigured = true;
+return config;
 }
+
+ int mult(int a, int b)
+ {
+     int  c = a*b;
+     return c;
+ }
 
 
 
 class RobotTeleop
 {
 
-  std::function<getJoyConfig(sensor_msgs::JoyConstPtr)> mapper_;
+  std::function<JoyConfig(sensor_msgs::JoyConstPtr)> mapper_;
 public:
   RobotTeleop(std::function<getJoyConfig(sensor_msgs::JoyConstPtr)> mapper) : mapper_(mapper):
   pedal_(1),
@@ -129,7 +135,7 @@ int main(int argc, char *argv[])
 {
   ros::init(argc, argv, "mobile_robot_teleop2");
   
-  RobotTeleop robot_teleop(std::function<JoyConfig(int)>(getJoyConfig));
+  RobotTeleop robot_teleop(std::function<JoyConfig(sensor_msgs::JoyConstPtr)>(getJoyConfig));
   
 
   ros::spin();
@@ -146,7 +152,7 @@ int main(int argc, char *argv[])
 
 
 
-
+/*
 
     
         {
@@ -345,3 +351,4 @@ int main(int argc, char *argv[])
 
 
 
+*/
