@@ -20,7 +20,7 @@ struct JoyConfig
   int gearDownRight;
 };
 
-JoyConfig* joyconfig_;
+
 bool mappingConfigured;
 
 JoyConfig getJoyConfig(sensor_msgs::JoyConstPtr)
