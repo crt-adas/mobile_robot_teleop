@@ -1,11 +1,13 @@
- <launch>
- 
-     <node name="joy_node" pkg="joy" type="joy_node">
-     </node>
-     <node pkg="mobile_robot_teleop" name="mobile_robot_teleop" type="mobile_robot_teleop"/>
-     </node>
- 
-   
+<launch>
+ <!-- mobile teleop node-->
+  <node pkg="mobile_robot_teleop" type="mobile_robot_teleop" name="mobile_robot_teleop" output="screen"/>
+
+ <!-- joy node -->
+  <node respawn="true" pkg="joy" type="joy_node" name="joy" >
+    <param name="dev" type="string" value="/dev/input/js2" />
+    <param name="deadzone" value="0.12" />
+    <param name="autorepeat_rate" type="double" value="40.0" />
+  </node>
 
  
- </launch>
+</launch>

@@ -19,8 +19,8 @@ private:
 
   ros::NodeHandle nh_;
   
-  sensor_msgs::Joy lastJoy;
-  sensor_msgs::Joy* lastJoyPtr = new sensor_msgs::Joy;
+  
+  sensor_msgs::Joy* lastJoy = new sensor_msgs::Joy;
 
   ros::Publisher hud_pub_, acm_pub_, set_pub_;
   ros::Subscriber joy_sub_;
@@ -167,16 +167,13 @@ public:
   set_pub_.publish(sett);
 
   ROS_INFO_STREAM("joy : " << joy->buttons[model.buttonRight] << " ");
-  //ROS_INFO_STREAM("lastJoy: "  << lastJoy.buttons[model.buttonRight] << " ");
   
   
-  ROS_INFO_STREAM("lastjoy : " << *lastJoyPtr << " ");
+  ROS_INFO_STREAM("lastjoy : " << *lastJoy << " ");
   ROS_INFO_STREAM("joy : " << *joy << " ");
-  *lastJoyPtr = *joy;
-
-  //double a = sizeof(sensor_msgs::Joy);
-  //char bb[a];
-  //strcpy_s(bb, a, joy);
+  *lastJoy = *joy;
+  
+  
   
   }
 
