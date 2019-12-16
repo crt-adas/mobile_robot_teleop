@@ -8,133 +8,185 @@
 #include <string>
 #include <functional>
 #include <ros/console.h>
-
-
-struct JoyConfig 
-{
-  int gearUpLeft;
-  int gearUpMidlle;
-  int gearUpRight;
-  int gearDownLeft;
-  int gearDownMiddle;
-  int gearDownRight;
-};
-
-
-bool mappingConfigured;
-
-JoyConfig getJoyConfig(sensor_msgs::JoyConstPtr)
-{
-  JoyConfig config;
-  if(joy.buttons.size() > 20)
-  {
-    config.gearUpLeft = 1 
-
-  }else if(joy.buttons.size() > 5) 
-  {
-    joyconfig_->gearUpLeft = 2
-  }else
-  {
-    ROS_DEBUG_ONCE("proper joy was not find");
-  }
-
-
-
-return config;
-}
-
- 
-
+#include <sensor_msgs/JointState.h>
 
 
 class RobotTeleop
 {
-
-  std::function<JoyConfig(sensor_msgs::JoyConstPtr)> mapper_;
-public:
-  RobotTeleop(std::function<getJoyConfig(sensor_msgs::JoyConstPtr)> mapper) : mapper_(mapper):
-  pedal_(1),
-  steering_(0)
-  {
-        
-  nh_.param("axis_steering", steering_, steering_);
-  nh_.param("axis_pedal", pedal_, pedal_);
-  nh_.param("scale_pedal", p_scale_, p_scale_);
-  nh_.param("scale_steering", s_scale_, s_scale_);
-
-  hud_pub_ = nh_.advertise<mobile_robot_teleop::VfomaHud>("vfoma/joy/hud", 1);
-  acm_pub_ = nh_.advertise<ackermann_msgs::AckermannDrive>("vfoma/joy/acm", 1);
-  set_pub_ = nh_.advertise<mobile_robot_teleop::VfomaSetting>("vfoma/joy/set", 1);
-
-  joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &RobotTeleop::joyCallback, this);
-  }
-
 private:
-
-  void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
   
+  bool initted_;
+
   ros::NodeHandle nh_;
-  sensor_msgs::Joy lastJoy;
-
-  int pedal_, steering_;
-  double p_scale_, s_scale_;
-
-  ros::Publisher hud_pub_;
-  ros::Publisher acm_pub_;
-  ros::Publisher set_pub_;
+  //sensor_msgs::Joy lastJoy;
+  
+  ros::Publisher hud_pub_, acm_pub_, set_pub_;
   ros::Subscriber joy_sub_;
-};
-
-
-
-void RobotTeleop::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
-{
   
-  if(!mappingConfigured)
-    auto model = mapper_(joy);
+  struct JoyConfig 
+    {
+        int gearUpLeft;
+        int gearUpMidlle;
+        int gearUpRight;
+        int gearDownLeft;
+        int gearDownMiddle;
+        int gearDownRight;
+
+        int steeringWheel;
+        int linearVelPedal;
+        int breakPad;
+
+        int buttonUp;
+        int buttonDown;
+        int buttonLeft;
+        int buttonRight;
+        
+        int bottonThumbRight;
+        int bottonThumbLeft;
+
+        int bottonBackWheelRight;
+        int bottonBackWheelLeft;
+
+    };
+  //TODO make getjoyconfig spin once
+  JoyConfig getJoyConfig(const sensor_msgs::JoyConstPtr &joy)
+    {
+    JoyConfig config;
+    if(joy->buttons.size() > 20)
+    {
+        config.gearUpLeft = 12;
+        config.gearUpMidlle = 14;
+        config.gearUpRight = 16;
+        config.gearDownLeft = 13;
+        config.gearDownMiddle = 15;
+        config.gearDownRight = 17;
+        config.steeringWheel = 0;
+        config.linearVelPedal = 2;
+        config.breakPad = 3;
+
+        config.buttonUp = 3;
+        config.buttonDown = 0;
+        config.buttonLeft = 1;
+        config.buttonRight = 2;
+    
+        config.bottonThumbRight = 4;
+        config.bottonThumbLeft = 5;
+
+        config.bottonBackWheelRight = 6;
+        config.bottonBackWheelLeft = 7;
+
+
+    }else if(joy->buttons.size() > 5) 
+    {
+        config.gearUpLeft = 12;
+        config.gearUpMidlle = 14;
+        config.gearUpRight = 16;
+        config.gearDownLeft = 13;
+        config.gearDownMiddle = 15;
+        config.gearDownRight = 17;
+        config.steeringWheel = 0;
+        config.linearVelPedal = 2;
+        config.breakPad = 3;
+
+        config.buttonUp = 3;
+        config.buttonDown = 0;
+        config.buttonLeft = 1;
+        config.buttonRight = 2;
+    
+        config.bottonThumbRight = 4;
+        config.bottonThumbLeft = 5;
+
+        config.bottonBackWheelRight = 6;
+        config.bottonBackWheelLeft = 7;
+
+    }else
+    {
+        RobotTeleop::initted_ = false;
+        ROS_ERROR_STREAM("proper joy was not find");
+    }
+
+    return config;
+    }
+
+public:
   
+  RobotTeleop()
+  {
+    ROS_INFO_STREAM("beginning of constructor");  
+    hud_pub_ = nh_.advertise<mobile_robot_teleop::VfomaHud>("vfoma/joy/hud", 1);
+    acm_pub_ = nh_.advertise<ackermann_msgs::AckermannDrive>("vfoma/joy/acm", 1);
+    set_pub_ = nh_.advertise<mobile_robot_teleop::VfomaSetting>("vfoma/joy/set", 1);
+    
+    joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &RobotTeleop::joyCallback, this);
+                                                                 
+    ROS_INFO_STREAM("end of Constructor");
+  } 
+
+
+  void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
+  {
+  ROS_INFO_STREAM("joycallback");
+  if(!initted_) 
+  {
+    RobotTeleop::initted_ = true;
+    auto model = getJoyConfig(joy);
+  }
+  
+  ROS_INFO_STREAM("proper joy was not found4");
   mobile_robot_teleop::VfomaHud hud;
   mobile_robot_teleop::VfomaSetting sett;
   ackermann_msgs::AckermannDrive acm;
   
 
-  hud.direction = 
-  hud.gear = 
-  acm.steering_angle = 
-  acm.steering_angle_velocity = 
-  acm.speed = 
+  hud.direction = 2;
+  hud.gear = 2;
+  acm.steering_angle = 2;
+  acm.steering_angle_velocity = 2;
+  acm.speed = 2;
   
-
-
-  if(joy.buttons[model.gearUpLeft] > 0.5 && lastJoy.buttons[model.gearUpLeft])
-  {
+  //if(joy.buttons[model.gearUpLeft] > 0.5 && lastJoy.buttons[model.gearUpLeft])
+  //{
     //send msg     
-  }
+  //}
 
 
-  sett.names.push_back("button2");
-  sett.values.push_back(function1());
+  //sett.names.push_back("button2");
+  //sett.values.push_back(function1());
 
-  sett.names.push_back("button3");
-  sett.values.push_back(function2());
+  //sett.names.push_back("button3");
+  //sett.values.push_back(function2());
 
   hud_pub_.publish(hud);
-  acm_pub_.publsih(acm);
+  acm_pub_.publish(acm);
   set_pub_.publish(sett);
 
-  lastJoy = joy
+  auto lastJoy = joy;
 
+  }
+
+};
+
+/*RobotTeleop::RobotTeleop(std::function<getJoyConfig(sensor_msgs::JoyConstPtr)> mapper) : mapper_(mapper): 
+{     
+  
+  
+  
 }
+*/
+
+ 
+
 
 
 int main(int argc, char *argv[])
 {
-  ros::init(argc, argv, "mobile_robot_teleop2");
-  
-  RobotTeleop robot_teleop(std::function<JoyConfig(sensor_msgs::JoyConstPtr)>(getJoyConfig));
-  
-
+  using namespace sensor_msgs;
+  ros::init(argc, argv, "mobile_robot_teleop");
+  ROS_INFO_STREAM("main loop");
+  RobotTeleop robot_teleop;
+  ROS_INFO_STREAM("main loop after object");
   ros::spin();
+  ROS_INFO_STREAM("after spin");
 }
     
 
