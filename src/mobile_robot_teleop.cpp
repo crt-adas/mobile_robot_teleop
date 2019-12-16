@@ -15,11 +15,13 @@ class RobotTeleop
 {
 private:
   
-  bool initted_;
+  bool initted_ = false;
 
   ros::NodeHandle nh_;
-  //sensor_msgs::Joy lastJoy;
   
+  sensor_msgs::Joy lastJoy;
+  sensor_msgs::Joy* lastJoyPtr = new sensor_msgs::Joy;
+
   ros::Publisher hud_pub_, acm_pub_, set_pub_;
   ros::Subscriber joy_sub_;
   
@@ -48,7 +50,7 @@ private:
         int bottonBackWheelLeft;
 
     };
-  //TODO make getjoyconfig spin once
+  
   JoyConfig getJoyConfig(const sensor_msgs::JoyConstPtr &joy)
     {
     JoyConfig config;
@@ -108,6 +110,8 @@ private:
     return config;
     }
 
+    JoyConfig model;
+
 public:
   
   RobotTeleop()
@@ -123,16 +127,18 @@ public:
   } 
 
 
-  void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
+  void joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
   {
-  ROS_INFO_STREAM("joycallback");
+  //ROS_INFO_STREAM("joycallback beginning");
   if(!initted_) 
   {
+    //ROS_INFO_STREAM("initiation");
     RobotTeleop::initted_ = true;
-    auto model = getJoyConfig(joy);
+    model = getJoyConfig(joy);
+    //ROS_INFO_STREAM("model in: " << model.buttonRight << " ");
   }
-  
-  ROS_INFO_STREAM("proper joy was not found4");
+   // ROS_INFO_STREAM("model out: " << model.buttonRight << " ");
+  //ROS_INFO_STREAM("after inittation");
   mobile_robot_teleop::VfomaHud hud;
   mobile_robot_teleop::VfomaSetting sett;
   ackermann_msgs::AckermannDrive acm;
@@ -160,8 +166,18 @@ public:
   acm_pub_.publish(acm);
   set_pub_.publish(sett);
 
-  auto lastJoy = joy;
+  ROS_INFO_STREAM("joy : " << joy->buttons[model.buttonRight] << " ");
+  //ROS_INFO_STREAM("lastJoy: "  << lastJoy.buttons[model.buttonRight] << " ");
+  
+  
+  ROS_INFO_STREAM("lastjoy : " << *lastJoyPtr << " ");
+  ROS_INFO_STREAM("joy : " << *joy << " ");
+  *lastJoyPtr = *joy;
 
+  //double a = sizeof(sensor_msgs::Joy);
+  //char bb[a];
+  //strcpy_s(bb, a, joy);
+  
   }
 
 };
@@ -173,9 +189,6 @@ public:
   
 }
 */
-
- 
-
 
 
 int main(int argc, char *argv[])
