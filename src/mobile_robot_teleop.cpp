@@ -6,29 +6,26 @@
 #include <mobile_robot_teleop/VfomaHud.h>
 #include <mobile_robot_teleop/VfomaSetting.h>
 #include <string>
-#include <functional>
 #include <ros/console.h>
 #include <sensor_msgs/JointState.h>
-
+#include <std_msgs/Duration.h>
 
 class RobotTeleop
 {
 private:
-  
+  int gearNow = 0;
+  int dirctionNow = 0;
   bool initted_ = false;
-
   ros::NodeHandle nh_;
-  
-  
   sensor_msgs::Joy* lastJoy = new sensor_msgs::Joy;
-
+  
   ros::Publisher hud_pub_, acm_pub_, set_pub_;
   ros::Subscriber joy_sub_;
   
   struct JoyConfig 
     {
         int gearUpLeft;
-        int gearUpMidlle;
+        int gearUpMiddle;
         int gearUpRight;
         int gearDownLeft;
         int gearDownMiddle;
@@ -57,11 +54,12 @@ private:
     if(joy->buttons.size() > 20)
     {
         config.gearUpLeft = 12;
-        config.gearUpMidlle = 14;
+        config.gearUpMiddle = 14;
         config.gearUpRight = 16;
         config.gearDownLeft = 13;
         config.gearDownMiddle = 15;
         config.gearDownRight = 17;
+
         config.steeringWheel = 0;
         config.linearVelPedal = 2;
         config.breakPad = 3;
@@ -81,7 +79,7 @@ private:
     }else if(joy->buttons.size() > 5) 
     {
         config.gearUpLeft = 12;
-        config.gearUpMidlle = 14;
+        config.gearUpMiddle = 14;
         config.gearUpRight = 16;
         config.gearDownLeft = 13;
         config.gearDownMiddle = 15;
@@ -110,93 +108,143 @@ private:
     return config;
     }
 
-    JoyConfig model;
+  JoyConfig model;
 
 public:
   
   RobotTeleop()
-  {
-    ROS_INFO_STREAM("beginning of constructor");  
+    {
     hud_pub_ = nh_.advertise<mobile_robot_teleop::VfomaHud>("vfoma/joy/hud", 1);
     acm_pub_ = nh_.advertise<ackermann_msgs::AckermannDrive>("vfoma/joy/acm", 1);
     set_pub_ = nh_.advertise<mobile_robot_teleop::VfomaSetting>("vfoma/joy/set", 1);
-    
     joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &RobotTeleop::joyCallback, this);
-                                                                 
-    ROS_INFO_STREAM("end of Constructor");
-  } 
+    } 
 
 
   void joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
   {
-  //ROS_INFO_STREAM("joycallback beginning");
-  if(!initted_) 
-  {
-    //ROS_INFO_STREAM("initiation");
-    RobotTeleop::initted_ = true;
-    model = getJoyConfig(joy);
-    //ROS_INFO_STREAM("model in: " << model.buttonRight << " ");
+  
+    if(!initted_) 
+    {
+        
+        initted_ = true;
+        *lastJoy = *joy;
+        model = getJoyConfig(joy);
+
+    }
+    
+    
+    mobile_robot_teleop::VfomaHud hud;
+    mobile_robot_teleop::VfomaSetting sett;
+    ackermann_msgs::AckermannDrive acm;
+
+    
+    sett.names.push_back("clearBeta");
+    sett.values.push_back(buttonPressed(model.buttonDown, joy, lastJoy) || buttonPressed(model.buttonLeft, joy, lastJoy));
+
+    sett.names.push_back("addTrailer");
+    sett.values.push_back(buttonPressed(model.buttonUp, joy, lastJoy));
+    
+    sett.names.push_back("debug");
+    sett.values.push_back(buttonPressed(model.buttonRight, joy, lastJoy));
+    
+    sett.names.push_back("sigmaUp");
+    sett.values.push_back(buttonPressed(model.bottonBackWheelLeft, joy, lastJoy) || buttonPressed(model.bottonThumbLeft, joy, lastJoy));
+    
+    sett.names.push_back("sigmaDown");
+    sett.values.push_back(buttonPressed(model.bottonBackWheelRight, joy, lastJoy) || buttonPressed(model.bottonThumbRight, joy, lastJoy));
+    
+
+    if(joy->buttons[model.gearUpLeft] > 0.5)
+    {
+        hud.direction = 1;
+        gearNow = hud.gear = 1;
+        dirctionNow = 1;
+    } else if(joy->buttons[model.gearUpMiddle] > 0.5)
+    {
+        hud.direction = 1;
+        gearNow = hud.gear = 2;
+        dirctionNow = 1;
+    } else if(joy->buttons[model.gearUpRight] > 0.5)
+    {
+        hud.direction = 1;
+        gearNow = hud.gear = 3;
+        dirctionNow = 1;
+    } else if(joy->buttons[model.gearDownLeft] > 0.5)
+    {
+        hud.direction = 2;
+        gearNow = hud.gear = 1;
+        dirctionNow = -1;
+    } else if(joy->buttons[model.gearDownMiddle] > 0.5)
+    {
+        hud.direction = 2;
+        gearNow = hud.gear = 2;
+        dirctionNow = -1;
+    } else if(joy->buttons[model.gearDownRight] > 0.5)
+    {
+        hud.direction = 2;
+        gearNow = hud.gear = 3;
+        dirctionNow = -1;
+    } else 
+    {
+        hud.direction = 0;
+        gearNow = hud.gear = 0;
+        dirctionNow = 0;
+    }
+
+    
+    
+    acm.steering_angle = joy->axes[model.steeringWheel];
+    acm.speed = (joy->axes[model.linearVelPedal] / 3) * gearNow * dirctionNow;
+    
+
+    acm.steering_angle_velocity = getDiff(model.steeringWheel, joy, lastJoy);
+    acm.acceleration = (getDiff(model.linearVelPedal, joy, lastJoy) /3) * gearNow * dirctionNow ;
+
+    //ROS_INFO_STREAM("acc: " << acm.acceleration << " " );
+
+
+    hud_pub_.publish(hud);
+    acm_pub_.publish(acm);
+    set_pub_.publish(sett);
+
+    *lastJoy = *joy;
+    ROS_INFO_STREAM("my state: I'm publishing xd " );
   }
-   // ROS_INFO_STREAM("model out: " << model.buttonRight << " ");
-  //ROS_INFO_STREAM("after inittation");
-  mobile_robot_teleop::VfomaHud hud;
-  mobile_robot_teleop::VfomaSetting sett;
-  ackermann_msgs::AckermannDrive acm;
-  
 
-  hud.direction = 2;
-  hud.gear = 2;
-  acm.steering_angle = 2;
-  acm.steering_angle_velocity = 2;
-  acm.speed = 2;
+  bool buttonPressed(int pressedButton, const sensor_msgs::JoyConstPtr &joy, sensor_msgs::Joy* &lastJoy)
+  { 
+    if(joy->buttons[pressedButton] > 0.5 && lastJoy->buttons[pressedButton] < 0.5 )
+    {
+        return true;
+    } else {
+        return false;
+    }   
+  }
   
-  //if(joy.buttons[model.gearUpLeft] > 0.5 && lastJoy.buttons[model.gearUpLeft])
-  //{
-    //send msg     
-  //}
-
-
-  //sett.names.push_back("button2");
-  //sett.values.push_back(function1());
-
-  //sett.names.push_back("button3");
-  //sett.values.push_back(function2());
-
-  hud_pub_.publish(hud);
-  acm_pub_.publish(acm);
-  set_pub_.publish(sett);
-
-  ROS_INFO_STREAM("joy : " << joy->buttons[model.buttonRight] << " ");
-  
-  
-  ROS_INFO_STREAM("lastjoy : " << *lastJoy << " ");
-  ROS_INFO_STREAM("joy : " << *joy << " ");
-  *lastJoy = *joy;
-  
-  
-  
+  float getDiff(int axes_, const sensor_msgs::JoyConstPtr &joy, sensor_msgs::Joy* &lastJoy) 
+  {
+    int64_t  t1 = lastJoy->header.stamp.toNSec();
+    int64_t  t2 = joy->header.stamp.toNSec();
+    float diff = ((joy->axes[axes_]) - (lastJoy->axes[axes_])) / ((t2 -t1) * (10^-9)); 
+    //ROS_INFO_STREAM("diff: " << diff << " " );
+    return diff;
   }
 
 };
 
-/*RobotTeleop::RobotTeleop(std::function<getJoyConfig(sensor_msgs::JoyConstPtr)> mapper) : mapper_(mapper): 
-{     
-  
-  
-  
-}
-*/
+    
 
 
 int main(int argc, char *argv[])
 {
   using namespace sensor_msgs;
   ros::init(argc, argv, "mobile_robot_teleop");
-  ROS_INFO_STREAM("main loop");
+  
   RobotTeleop robot_teleop;
-  ROS_INFO_STREAM("main loop after object");
+  
   ros::spin();
-  ROS_INFO_STREAM("after spin");
+  
 }
     
 
